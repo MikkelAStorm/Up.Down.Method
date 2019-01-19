@@ -4,32 +4,31 @@
 \alias{up_down_ld50}
 \title{Analyze Up-Down Lethal Dose 50\% Experiments}
 \usage{
-up_down_ld50(end_point, steps, log_steps = FALSE, response_pattern, ID,
-  verbose = FALSE, delta_type = c("flexible", "constant", "exact"))
+up_down_ld50(end_point, steps, response_pattern, log_steps = FALSE,
+  delta_type = c("flexible", "constant", "exact"))
 }
 \arguments{
 \item{end_point}{The weight of the last experiment in the series.}
 
 \item{steps}{A vector containing the steps that are used in the experimental series.}
 
-\item{log_steps}{This flag is to differentiate between if the steps are original values, or log 10 scale)}
-
 \item{response_pattern}{A string of X and O, response and no response respectivly, repressenting the chain of results in the up-down experiment chain.}
 
-\item{ID}{ID of the experiment chian - used to differentiate the output for multiple tests}
-
-\item{verbose}{}
+\item{log_steps}{This flag is to differentiate between if the steps are original values, or log 10 scale)}
 
 \item{delta_type}{Diciding which step type to use. flexible referes to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.}
 }
 \description{
-This is an R adaption of the Up-Down method for minimizing experiment subjects in 50\% lethal dose studdies, described by (Brownlee1953). It is developed for Von Frey filament experiments, thus standard steps for these are hardcoded, but with the standard costum sitting it is applicable for all Up-Down-ld50 expreiments. As of version 0.1.0 the code is applied with a commulative likelihood function based on the normal distribution, with exact stepsizes (Brownlee1953) or average stepsizes as described in (Dixon1980), but not limmeted by the 6-9 expermints as found in Table 7. Brownlee, K. A., et al. "The Up-and-Down Method with Small Samples." Journal of the American Statistical Association, vol. 48, no. 262, 1953, pp. 262–277., www.jstor.org/stable/2281287. Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
+This is an R adaption of the Up-Down method for minimizing experiment subjects in 50\% lethal dose studdies, described by (Brownlee1953). As of this version the code is applied with a commulative likelihood function based on the normal distribution, with exact stepsizes (Brownlee1953) or average stepsizes (flexible or constant delta) as described in (Dixon1980), but not limmeted by the 6-9 expermints as found in Table 7.
+
+ Brownlee, K. A., et al. "The Up-and-Down Method with Small Samples." Journal of the American Statistical Association, vol. 48, no. 262, 1953, pp. 262–277., www.jstor.org/stable/2281287.
+
+ Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
 }
 \examples{
 up_down_ld50(end_point = 0.07,
     steps = c( 0.008, 0.02, 0.04, 0.07, 0.16, 0.4, 0.6, 1, 2),
-    log_steps = F,
-    response_pattern = "xoxoxx", ID = 1,
+    log_steps = F, response_pattern = "xoxoxx",
     delta_type = "flexible")
 
 }

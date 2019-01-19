@@ -1,61 +1,72 @@
 #' @title Analyze Up-Down Lethal Dose 50\% Experiments
 #'
-#' @description This is an R adaption of the Up-Down method for minimizing experiment subjects in 50\% lethal dose studdies, described by (Brownlee1953). It is developed for Von Frey filament experiments, thus standard steps for these are hardcoded, but with the standard costum sitting it is applicable for all Up-Down-ld50 expreiments. As of version 0.1.0 the code is applied with a commulative likelihood function based on the normal distribution, with exact stepsizes (Brownlee1953) or average stepsizes as described in (Dixon1980), but not limmeted by the 6-9 expermints as found in Table 7. Brownlee, K. A., et al. "The Up-and-Down Method with Small Samples." Journal of the American Statistical Association, vol. 48, no. 262, 1953, pp. 262–277., www.jstor.org/stable/2281287. Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
+#' @description This is an R adaption of the Up-Down method for minimizing experiment subjects in 50\% lethal dose studdies, described by (Brownlee1953). As of this version the code is applied with a commulative likelihood function based on the normal distribution, with exact stepsizes (Brownlee1953) or average stepsizes (flexible or constant delta) as described in (Dixon1980), but not limmeted by the 6-9 expermints as found in Table 7.
+#'
+#'  Brownlee, K. A., et al. "The Up-and-Down Method with Small Samples." Journal of the American Statistical Association, vol. 48, no. 262, 1953, pp. 262–277., www.jstor.org/stable/2281287.
+#'
+#'  Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
 #'
 #' @param end_point The weight of the last experiment in the series.
 #' @param steps A vector containing the steps that are used in the experimental series.
 #' @param response_pattern A string of X and O, response and no response respectivly, repressenting the chain of results in the up-down experiment chain.
-#' @param ID ID of the experiment chian - used to differentiate the output for multiple tests
 #' @param log_steps This flag is to differentiate between if the steps are original values, or log 10 scale)
 #' @param delta_type Diciding which step type to use. flexible referes to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.
-#' @param verbose
 #'
 #' @return NULL
 #'
 #' @examples up_down_ld50(end_point = 0.07,
 #'     steps = c( 0.008, 0.02, 0.04, 0.07, 0.16, 0.4, 0.6, 1, 2),
-#'     log_steps = F,
-#'     response_pattern = "xoxoxx", ID = 1,
+#'     log_steps = F, response_pattern = "xoxoxx",
 #'     delta_type = "flexible")
 #'
 #' @export up_down_ld50 res_to_bol res_bol end_from_response index_from_res flexible_d end_from_response nll.cnorm nll.setD all.character.same
 #### working function ####
 
-up_down_ld50 = function(end_point, steps, log_steps = FALSE,
-                        response_pattern, ID, verbose = FALSE,
+up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
                         delta_type = c("flexible", "constant", "exact")){
 
-  # only use first value in each step
+  # only use first value of the delta type
   delta_type = delta_type[1]
+  # Correct response pattern for case
   response_pattern = toupper(response_pattern)
-  steps_text = paste(steps, collapse=', ')
 
   # check if end_point is one of the steps
   if ( ! end_point %in% steps  ){
-    return("end_point not in steps")
+    return("End_point not in steps")
   } else {
+    # save index of endpoint
     i = match(end_point, steps)
   }
 
-  # change steps to to log scale
+  # change steps to to log scale if they are not all ready
   if ( ! log_steps){
     steps = log10(steps)
   }
 
   # calculate estimated LD50
+  # If all characters are the same it is unly possible to get a limit
+  # and not a precise estimate of the mean.
   if ( all.character.same(response_pattern) ){
+    formula_used = F
     char = strsplit(response_pattern, "")[[1]][1]
+    # If all X (response) the real mean must be below the end point
     if (char == "X"){
       mu = paste0( "<" , as.character( end_point ) )
     } else{
+      # If all O (no response) the mean must be above the end point.
       mu = paste0( ">" , as.character( end_point ) )
     }
+    # use exact delta values
   } else if( delta_type[1] == "exact"){
+    # save that the formula is not used
+    formula_used = F
+    # Log transform endpoint if need be
     if ( ! log_steps ){
       end_point = log10(end_point)
     }
     # calculate expected mean based on actual steps and negative log likelihood
     index = index_from_res( end_index = i, res = response_pattern)
+    # use average of used delta values as estimate of range where the mean is going to be
     d = flexible_d( end_index = i, res = response_pattern, steps = steps )
     # optimize for mu
     mu_opt = ( optimize(nll.cnorm,
@@ -64,6 +75,7 @@ up_down_ld50 = function(end_point, steps, log_steps = FALSE,
                         response =  response_pattern ,
                         sd = d)$minimum )
 
+    # Re calculate the estimated mean in non transformed values.
     if (log_steps){
       mu = as.character(10^(mu_opt)/10000)
     } else{
@@ -72,7 +84,8 @@ up_down_ld50 = function(end_point, steps, log_steps = FALSE,
 
 
   } else {
-
+    # Save that the formual is used
+    formula_used = T
     # get k from negative log likelihood function, based on the response_pattern:
     k = ( optimize(nll.setD,
                    end_from_response(response_pattern) + c(-10,10),
@@ -89,6 +102,7 @@ up_down_ld50 = function(end_point, steps, log_steps = FALSE,
 
     }
 
+    # calcualte mu based on formula using k and delta.
     if (log_steps){
       mu = as.character( 10^( end_point + d*k )/10000 )
     } else {
@@ -96,31 +110,22 @@ up_down_ld50 = function(end_point, steps, log_steps = FALSE,
     }
 
   }
-
-  if (verbose){
-    if(log_steps){
-      method_expl = "using the handle number"
-    } else {
-      method_expl = "force"
-    }
-
-    text = sprintf("Sensitivity to evoked mechanical stimulation was assessed using a series of calibrated von Frey monoﬁlaments (%s). The Dixon up and down method was used to calculate the 50 percent withdrawal threshold [1]. The calculation was made with up_down_ld50 {up.down.ld50} [2] %s and a %s delta-value [3].
-    1. Dixon, W. J. 'Efficient Analysis of Experimental Observations' Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
-    2. Reference to program
-    3. Reference to our manuscript", steps_text, as.character(method_expl), as.character(delta_type ))
-
-    return (text[1])
-  } else {
-    return (mu)
+  # return results
+  if(formula_used){
+    result = as.numeric( c(mu, d, k) )
+    names(result) = c("mean", "k", "delta")
+  } else{
+    result = as.numeric( c(mu) )
+    names(result) = c("mean")
   }
+  return( result  )
 }
 
-
-
 #### preperation functions ####
-# get response boolean vector from XO marcow chain
+
+# get boleen response from single X or O
 res_to_bol = function( res ){
-  # correct for normal or capital letters
+  # correct to capital letters
   res = toupper(res)
   # if there is response
   if (res == "X"){
@@ -135,29 +140,38 @@ res_to_bol = function( res ){
   return(r)
 }
 
+# get response boolean vector from XO marcow chain
 res_bol = function(res){
   res = rapply( as.list( strsplit( res, split = "" )[[1]]) , res_to_bol)
   return(res)
 }
 
+# get indexex of steps used based on the response pattern
 index_from_res = function( end_index, res){
+  # get bool response vector
   res = res_bol(res)
+  # initiate index list
   index = rep(0, length(res))
+  # set last value
   index[length(index)] = end_index
+  # run tough bool response vector to trace back the steps used
   ind = end_index
   for ( i in (length(res)-1): 1){
     if( res[i] ){ ind = ind + 1} else { ind = ind - 1 }
     index[i] = ind
   }
   if( any( index < 1 ) ){
-    print("index below 1")
+    print("Response pattern moves outside the steps provided")
     break
   }
   return(index)
 }
 
+# claculate the flexible delta value, based only on the steps used.
 flexible_d = function( end_index, res, steps ){
+  # get index of steps used
   index = index_from_res( end_index = end_index, res = res)
+  # calculate average step size
   d = mean( steps[ (min(index) + 1) : max(index) ] - steps[ min(index) : (max(index) - 1)])
   return(d)
 }
@@ -214,9 +228,11 @@ nll.setD = function( mu, d = 1, x0, response ){
   return( nll.cnorm( mu = mu, x = D, response = response)  )
 }
 
+# check if all charracters in a string are the same
 all.character.same = function(string){
-  s = strsplit(string, "")
-  s = s[[1]]
+  # split string
+  s = strsplit(string, "")[[1]]
+  # compare all characters to the one before them
   for (i in 1:(length(s)-1 ) ){
     if (s[i] != s[i+1]){
       return (FALSE)

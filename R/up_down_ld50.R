@@ -38,6 +38,17 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
     i = match(end_point, steps)
   }
 
+  # check if the response pattern is within the steps
+  index = index_from_res( end_index = i, res = response_pattern)
+
+  if (max(index) > length(steps) ){
+    return("Response pattern starts above step ratio")
+  }
+
+  if (min(index) < 1 ){
+    return("Response pattern starts below step ratio")
+  }
+
   # change steps to to log scale if they are not all ready
   if ( ! log_steps){
     steps = log10(steps)
@@ -56,6 +67,8 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
       # If all O (no response) the mean must be above the end point.
       mu = paste0( ">" , as.character( end_point ) )
     }
+    names(mu) = "mean"
+    return(mu)
     # use exact delta values
   } else if( delta_type[1] == "exact"){
     # save that the formula is not used
@@ -65,7 +78,7 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
       end_point = log10(end_point)
     }
     # calculate expected mean based on actual steps and negative log likelihood
-    index = index_from_res( end_index = i, res = response_pattern)
+
     # use average of used delta values as estimate of range where the mean is going to be
     d = flexible_d( end_index = i, res = response_pattern, steps = steps )
     # optimize for mu
@@ -134,7 +147,7 @@ res_to_bol = function( res ){
   } else if (res == "O"){
     r = F
   } else {
-    print("Unknown response type, can only be X (response) or O (no response)")
+    return("Unknown response type, can only be X (response) or O (no response)")
     break
   }
   return(r)
@@ -159,10 +172,6 @@ index_from_res = function( end_index, res){
   for ( i in (length(res)-1): 1){
     if( res[i] ){ ind = ind + 1} else { ind = ind - 1 }
     index[i] = ind
-  }
-  if( any( index < 1 ) ){
-    print("Response pattern moves outside the steps provided")
-    break
   }
   return(index)
 }
@@ -233,9 +242,11 @@ all.character.same = function(string){
   # split string
   s = strsplit(string, "")[[1]]
   # compare all characters to the one before them
-  for (i in 1:(length(s)-1 ) ){
-    if (s[i] != s[i+1]){
-      return (FALSE)
+  if(length(s)>1){
+    for (i in 1:(length(s)-1 ) ){
+      if (s[i] != s[i+1]){
+        return (FALSE)
+      }
     }
   }
   return (TRUE)

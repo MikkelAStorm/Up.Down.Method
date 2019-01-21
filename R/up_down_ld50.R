@@ -6,24 +6,23 @@
 #'
 #'  Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
 #'
-#' @param end_point The weight of the last experiment in the series.
+#' @param end_point The value of the last experiment in the series.
 #' @param steps A vector containing the steps that are used in the experimental series.
-#' @param response_pattern A string of X and O, response and no response respectivly, repressenting the chain of results in the up-down experiment chain.
-#' @param log_steps This flag is to differentiate between if the steps are original values, or log 10 scale)
-#' @param delta_type Diciding which step type to use. flexible referes to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.
+#' @param response_pattern A string of X and O, response and no response respectively, representing the chain of results in the up-down experiment chain.
+#' @param delta_type Deciding which step type to use. flexible refers to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.
 #'
 #' @return NULL
 #'
-#' @examples up_down_ld50(end_point = 0.07,
-#'     steps = c( 0.008, 0.02, 0.04, 0.07, 0.16, 0.4, 0.6, 1, 2),
-#'     log_steps = F, response_pattern = "xoxoxx",
+#' @examples up_down_ld50(end_point = 0.602,
+#'     steps = c( 0, 0.301, 0.602, 0.903, 1.204 ),
+#'     response_pattern = "oxxoxo",
 #'     delta_type = "flexible")
 #'
 #' @export up_down_ld50 res_to_bol res_bol end_from_response index_from_res flexible_d end_from_response nll.cnorm nll.setD all.character.same
 #### working function ####
 
-up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
-                        delta_type = c("flexible", "constant", "exact")){
+up_down_ld50 = function(end_point, steps, response_pattern,
+                        delta_type = c("exact", "flexible", "constant")){
 
   # only use first value of the delta type
   delta_type = delta_type[1]
@@ -41,21 +40,16 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
   # check if the response pattern is within the steps
   index = index_from_res( end_index = i, res = response_pattern)
 
+  # check if the response pattern stays within the step ratio
   if (max(index) > length(steps) ){
     return("Response pattern starts above step ratio")
   }
-
   if (min(index) < 1 ){
     return("Response pattern starts below step ratio")
   }
 
-  # change steps to to log scale if they are not all ready
-  if ( ! log_steps){
-    steps = log10(steps)
-  }
-
   # calculate estimated LD50
-  # If all characters are the same it is unly possible to get a limit
+  # If all characters are the same it is only possible to get a limit
   # and not a precise estimate of the mean.
   if ( all.character.same(response_pattern) ){
     formula_used = F
@@ -71,32 +65,21 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
     return(mu)
     # use exact delta values
   } else if( delta_type[1] == "exact"){
+    # calculate expected mean based on actual steps and negative log likelihood
     # save that the formula is not used
     formula_used = F
-    # Log transform endpoint if need be
-    if ( ! log_steps ){
-      end_point = log10(end_point)
-    }
-    # calculate expected mean based on actual steps and negative log likelihood
-
     # use average of used delta values as estimate of range where the mean is going to be
     d = flexible_d( end_index = i, res = response_pattern, steps = steps )
     # optimize for mu
-    mu_opt = ( optimize(nll.cnorm,
+    mu = ( optimize(nll.cnorm,
                         end_point + d * c(-2,2),
                         x = steps[index],
                         response =  response_pattern ,
                         sd = d)$minimum )
 
-    # Re calculate the estimated mean in non transformed values.
-    if (log_steps){
-      mu = as.character(10^(mu_opt)/10000)
-    } else{
-      mu = as.character(10^(mu_opt))
-    }
-
 
   } else {
+    # calculate based on formula (Dixon1980)
     # Save that the formual is used
     formula_used = T
     # get k from negative log likelihood function, based on the response_pattern:
@@ -114,15 +97,10 @@ up_down_ld50 = function(end_point, steps, response_pattern, log_steps = FALSE,
       d = mean( steps[2 : length(steps)] - steps[1 : (length(steps) - 1)])
 
     }
-
     # calcualte mu based on formula using k and delta.
-    if (log_steps){
-      mu = as.character( 10^( end_point + d*k )/10000 )
-    } else {
-      mu = as.character( 10^( log10( end_point ) + d*k ) )
-    }
-
+    mu = end_point + d*k
   }
+
   # return results
   if(formula_used){
     result = as.numeric( c(mu, d, k) )

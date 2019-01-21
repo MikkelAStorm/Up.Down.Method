@@ -4,19 +4,17 @@
 \alias{up_down_ld50}
 \title{Analyze Up-Down Lethal Dose 50\% Experiments}
 \usage{
-up_down_ld50(end_point, steps, response_pattern, log_steps = FALSE,
-  delta_type = c("flexible", "constant", "exact"))
+up_down_ld50(end_point, steps, response_pattern, delta_type = c("exact",
+  "flexible", "constant"))
 }
 \arguments{
-\item{end_point}{The weight of the last experiment in the series.}
+\item{end_point}{The value of the last experiment in the series.}
 
 \item{steps}{A vector containing the steps that are used in the experimental series.}
 
-\item{response_pattern}{A string of X and O, response and no response respectivly, repressenting the chain of results in the up-down experiment chain.}
+\item{response_pattern}{A string of X and O, response and no response respectively, representing the chain of results in the up-down experiment chain.}
 
-\item{log_steps}{This flag is to differentiate between if the steps are original values, or log 10 scale)}
-
-\item{delta_type}{Diciding which step type to use. flexible referes to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.}
+\item{delta_type}{Deciding which step type to use. flexible refers to average delta between the used steps, constant is the average delta between all steps in the steps vector, exact is using the exact delta for each step.}
 }
 \description{
 This is an R adaption of the Up-Down method for minimizing experiment subjects in 50\% lethal dose studdies, described by (Brownlee1953). As of this version the code is applied with a commulative likelihood function based on the normal distribution, with exact stepsizes (Brownlee1953) or average stepsizes (flexible or constant delta) as described in (Dixon1980), but not limmeted by the 6-9 expermints as found in Table 7.
@@ -26,9 +24,9 @@ This is an R adaption of the Up-Down method for minimizing experiment subjects i
  Dixon, W. J. "Efficient Analysis of Experimental Observations" Annual Review of Pharmacology and Toxicology 1980 20:1, 441-462
 }
 \examples{
-up_down_ld50(end_point = 0.07,
-    steps = c( 0.008, 0.02, 0.04, 0.07, 0.16, 0.4, 0.6, 1, 2),
-    log_steps = F, response_pattern = "xoxoxx",
+up_down_ld50(end_point = 0.602,
+    steps = c( 0, 0.301, 0.602, 0.903, 1.204 ),
+    response_pattern = "oxxoxo",
     delta_type = "flexible")
 
 }

@@ -103,7 +103,7 @@ up_down_ld50 = function(end_point, steps, response_pattern,
 
   # return results
   if(formula_used){
-    result = as.numeric( c(mu, d, k) )
+    result = as.numeric( c(mu, k, d) )
     names(result) = c("mean", "k", "delta")
   } else{
     result = as.numeric( c(mu) )
